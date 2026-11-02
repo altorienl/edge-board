@@ -84,7 +84,10 @@ if (bytes > 600 * 1024) lints.push(`file is ${(bytes/1024).toFixed(0)}KB raw, ov
     try {
       const dom = execFileSync(chrome, ['--headless=new','--disable-gpu','--no-sandbox',
         '--virtual-time-budget=15000','--dump-dom',
-        'file://' + process.cwd() + '/' + file + '#/board/all?preset=1'],
+        /* nopaid=1 or this boot check spends 3 credits of the shipped key
+           every time the suite runs. The free feeds still load, which is
+           what the check is actually asserting. */
+        'file://' + process.cwd() + '/' + file + '#/board/all?preset=1&nopaid=1'],
         { encoding:'utf8', stdio:['ignore','pipe','ignore'], timeout:60000 });
       const m = dom.match(/data-vb-boot="([a-z]+)"/);
       const state = m ? m[1] : 'missing';

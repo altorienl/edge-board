@@ -418,9 +418,16 @@ VB.router = (function () {
     }
     el.appendChild(h('span', { class:'grow', style:'flex:1' }));
     const S = VB.store.get(), st = S.settings, M = VB.model.get();
+    /* Credits belong on the always-visible line, not buried in a Settings
+       panel. The month ran out once with no warning anywhere on screen, and
+       the first symptom was the board quietly dropping to one book -- which
+       reads as a bug, not as a budget. */
+    const bq = M && M.oddsQuota;
+    const left = bq && isFinite(bq.remaining) ? Number(bq.remaining) : null;
     el.appendChild(h('span', { class:'clock' },
       (st.bankroll ? '1u=' + money(st.unitUsd) + ' · bankroll ' + money(st.bankroll) + ' · λ ' + st.lambda : 'bankroll not set') +
-      ' · noise line ' + (M ? (M.eCritMedian * 100).toFixed(2) + 'pp @ M=' + M.nEval.toLocaleString() : '--')));
+      ' · noise line ' + (M ? (M.eCritMedian * 100).toFixed(2) + 'pp @ M=' + M.nEval.toLocaleString() : '--') +
+      (left !== null ? ' · ' + left.toLocaleString() + ' credits' : '')));
   }
   function strip() {
     const el = document.getElementById('demostrip');

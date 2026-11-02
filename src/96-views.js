@@ -296,13 +296,31 @@ VB.model = (function () {
   const ODDS_LEAGUES = { NFL:'americanfootball_nfl', NCAAF:'americanfootball_ncaaf',
                          MLB:'baseball_mlb', NBA:'basketball_nba',
                          NHL:'icehockey_nhl', NCAAB:'basketball_ncaab' };
-  const ODDS_DEFAULT = ['NFL', 'NCAAF'];
-  const ODDS_TTL_MS = 15 * 60 * 1000;
-  /* A cache is a cost saver, not a fallback of last resort. Serving a
-     six-hour-old pull as if it were current would show yesterday's slate
-     with today's date on it -- the worst kind of wrong, because it looks
-     fine. Past this age the cache is discarded rather than displayed. */
-  const ODDS_STALE_MAX_MS = 3 * 60 * 60 * 1000;
+  /* Two leagues cost 6 credits a visit, which is the single biggest line in
+     the burn. NCAAF still appears on the board -- ESPN carries it free --
+     it just shows one book instead of twenty. One paid league is the honest
+     default on a 500-credit plan; swap or add leagues in Settings when a
+     particular slate is worth the spend. */
+  const ODDS_DEFAULT = ['NFL'];
+  /* The TTL was 15 minutes, which quietly re-bought the slate four times an
+     hour while the user browsed -- and that is what actually drained the
+     month, not any single pull. Lines for a game two days out do not move
+     enough in six hours to be worth 3 credits, so one purchase now covers a
+     whole evening of clicking around. Inside a few hours of kickoff the
+     Refresh odds button is the right tool, and it is one click. */
+  const ODDS_TTL_MS = 3 * 60 * 60 * 1000;
+  /* Two limits, and they must stay ordered TTL <= STALE_MAX or there is a
+     window where the cache counts as fresh enough to skip the fetch but too
+     old to display, which renders an empty board.
+       TTL (3h)       serve the cache and do not spend.
+       STALE_MAX (6h) serve the cache ONLY as a labelled fallback, when a
+                      live fetch failed or a budget guard refused it.
+     Past 6h it is discarded rather than displayed: a cache is a cost saver,
+     not a fallback of last resort, and showing a stale slate as if it were
+     current is the worst kind of wrong because it looks fine. Between 3h
+     and 6h the age is always on screen -- the strip says CACHED with the
+     age, and the tile footer prints how old the prices are. */
+  const ODDS_STALE_MAX_MS = 6 * 60 * 60 * 1000;
   const CACHE_KEY = 'vb.oddscache';
 
   function readCache() {
@@ -402,7 +420,16 @@ VB.model = (function () {
        so it defines the board. ESPN then fills in leagues the key was not
        spent on. */
     const S0 = VB.store.get();
-    const key = (S0.keys && S0.keys.oddsapi) || '';
+    /* A test must not cost money. The self-test boots this page in a real
+       headless browser to prove it renders, and once the key shipped in the
+       file that boot started buying a slate -- 3 credits on every run of the
+       suite, spent on nothing anyone reads. `nopaid=1` suppresses the
+       metered path and leaves the free feeds live, which is all the boot
+       check needs. Measured: the suite cost 3 credits a run before this. */
+    const noPaid = typeof location !== 'undefined'
+      && /[?&]nopaid=1/.test(String(location.hash || '') + String(location.search || ''));
+    autoState.noPaid = noPaid;
+    const key = noPaid ? '' : ((S0.keys && S0.keys.oddsapi) || '');
     if (key) {
       autoState.oddsLeagues = [];
       /* SCOUT FREE FIRST. ESPN costs nothing and answers the only question

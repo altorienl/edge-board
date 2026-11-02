@@ -19,7 +19,15 @@ VB.budget = (function () {
 
   const KEY = 'vb.budget';
   const MONTHLY = 500;
-  const RESERVE = 60;              /* never spend below this */
+  /* A reserve LARGER than the remaining balance is not a safety margin, it
+     is a lockout. Measured: 52 credits left against a 60-credit reserve, so
+     every paid pull was refused and the board silently fell back to the one
+     free book -- the exact failure the reserve was supposed to prevent.
+     The reserve's job is to stop one busy Saturday emptying the month; with
+     three weeks left and 52 credits, the job is now rationing instead, and
+     that is the TTL and the cooldown's work, not the reserve's. 10 leaves a
+     couple of pulls for a game the user actually cares about. */
+  const RESERVE = 10;              /* never spend below this */
   /* The window was 14h, which was wrong -- not arithmetically, but about
      people. It assumed odds are only worth paying for near kickoff. In
      practice the app gets opened when the user thinks about a game, and NFL
